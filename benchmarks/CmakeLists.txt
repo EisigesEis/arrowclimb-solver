@@ -1,0 +1,20 @@
+# cmake_minimum_required(VERSION 3.20)
+
+# add_executable(bench_dedup bench_dedup.cpp)
+# target_include_directories(bench_dedup PRIVATE
+#   "${INCLUDE_GLOBAL}"
+# )
+# target_link_libraries(bench_dedup PRIVATE
+#   absl::flat_hash_set
+# )
+# set_property(TARGET bench_dedup PROPERTY
+#   MSVC_RUNTIME_LIBRARY "MultiThreaded")
+
+# target_compile_definitions(bench_dedup PRIVATE NDEBUG)
+# set_target_properties(bench_dedup PROPERTIES
+#   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/out"
+# )
+
+# add_test(NAME bench_dedup_cmd
+#          COMMAND bench_dedup --csv ${CMAKE_CURRENT_SOURCE_DIR}/out/bench_dedup.csv)
+# set_tests_properties(bench_dedup_cmd PROPERTIES LABELS "perf" DISABLED TRUE)

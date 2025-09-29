@@ -1,0 +1,13 @@
+.vscode
+src/bin
+src/obj
+test
+_*
+*.bak
+build
+.cache
+logs
+matrix_output*.txt
+results*.csv
+analysis
+defines
