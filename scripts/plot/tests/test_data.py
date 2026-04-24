@@ -118,6 +118,25 @@ class DataTests(unittest.TestCase):
         )
         self.assertEqual(target.title, "Bench: selected solver comparison with per-solver points")
 
+    def test_make_plot_specs_includes_selected_solver_without_discrepancy_plots(self) -> None:
+        specs = make_plot_specs("main", "Bench", {})
+        target = next(spec for spec in specs if spec.key == "selected_solver_bands_without_discrepancy")
+        self.assertEqual(target.filename, "selected_solver_bands_without_discrepancy.png")
+        self.assertEqual(target.kind, "selected_solver_bands_without_discrepancy")
+        self.assertTrue(target.x_axis_dependent)
+        self.assertEqual(target.solvers, ("ac_batch", "ac_fft", "gupta_batch", "gur"))
+        self.assertEqual(target.title, "Bench: selected solver comparison without discrepancy")
+
+        detail = next(spec for spec in specs if spec.key == "selected_solver_bands_without_discrepancy_detail")
+        self.assertEqual(detail.filename, "selected_solver_bands_without_discrepancy_detail.png")
+        self.assertEqual(detail.kind, "family_bands_detail")
+        self.assertTrue(detail.x_axis_dependent)
+        self.assertEqual(detail.solvers, ("ac_batch", "ac_fft", "gupta_batch", "gur"))
+        self.assertEqual(
+            detail.title,
+            "Bench: selected solver comparison without discrepancy with per-solver points",
+        )
+
     def test_make_plot_specs_keeps_fft_overview_output_contract(self) -> None:
         specs = make_plot_specs("main", "Bench", {})
         target = next(spec for spec in specs if spec.key == "fft_utilization_overview")

@@ -357,7 +357,7 @@ def _safe_solver_payload(overview: dict[str, object], key: str) -> dict[str, obj
 def _series_values(series: Iterable[BinnedSeries]) -> list[float]:
     values: list[float] = []
     for item in series:
-        for bucket in (item.q05, item.q25, item.q50, item.q75, item.q95):
+        for bucket in (item.q05, item.q25, item.q50, item.sparse_q50, item.q75, item.q95):
             values.extend(value for value in bucket if value is not None and value > 0.0)
     return values
 
@@ -388,6 +388,13 @@ def _support_range(series: Sequence[BinnedSeries]) -> tuple[float, float]:
         for mid, median in zip(item.mids, item.q50)
         if median is not None
     ]
+    mids_with_sparse_median = [
+        mid
+        for item in series
+        for mid, median in zip(item.mids, item.sparse_q50)
+        if median is not None
+    ]
+    mids_with_median.extend(mids_with_sparse_median)
     if mids_with_median:
         lower = min(mids_with_median)
         upper = max(mids_with_median)
@@ -443,6 +450,13 @@ def _family_variant(index: int) -> tuple[str, object]:
     )
 
 
+SPARSE_MARKERS = ("D", "s", "^", "P", "X", "v", "o")
+
+
+def _family_sparse_marker(index: int) -> str:
+    return SPARSE_MARKERS[index % len(SPARSE_MARKERS)]
+
+
 def _draw_median_line(ax, series: BinnedSeries, *, color: str, linestyle, linewidth: float = MEDIAN_LINEWIDTH) -> None:
     median_x = [mid for mid, value in zip(series.mids, series.q50) if value is not None]
     median_y = [value for value in series.q50 if value is not None]
@@ -450,7 +464,32 @@ def _draw_median_line(ax, series: BinnedSeries, *, color: str, linestyle, linewi
         ax.plot(median_x, median_y, color=color, linewidth=linewidth, linestyle=linestyle, zorder=3)
 
 
-def _draw_band(ax, series: BinnedSeries, color: str, median_linestyle) -> None:
+def _draw_sparse_median_markers(ax, series: BinnedSeries, *, color: str, marker: str = "D") -> None:
+    median_x = [mid for mid, value in zip(series.mids, series.sparse_q50) if value is not None]
+    median_y = [value for value in series.sparse_q50 if value is not None]
+    if median_x:
+        ax.scatter(
+            median_x,
+            median_y,
+            s=44,
+            marker=marker,
+            facecolors=color,
+            edgecolors="white",
+            linewidths=0.7,
+            alpha=0.48,
+            zorder=4,
+        )
+
+
+def _draw_band(
+    ax,
+    series: BinnedSeries,
+    color: str,
+    median_linestyle,
+    *,
+    sparse_marker: str = "D",
+    sparse_color: Optional[str] = None,
+) -> None:
     g95_x = [mid for mid, lo, hi in zip(series.mids, series.q05, series.q95) if lo is not None and hi is not None]
     g95_lo = [lo for lo, hi in zip(series.q05, series.q95) if lo is not None and hi is not None]
     g95_hi = [hi for lo, hi in zip(series.q05, series.q95) if lo is not None and hi is not None]
@@ -464,10 +503,12 @@ def _draw_band(ax, series: BinnedSeries, color: str, median_linestyle) -> None:
         ax.fill_between(giqr_x, giqr_lo, giqr_hi, facecolor=color, alpha=INNER_BAND_ALPHA, edgecolor="none")
 
     _draw_median_line(ax, series, color="black", linestyle=median_linestyle)
+    _draw_sparse_median_markers(ax, series, color=sparse_color or "black", marker=sparse_marker)
 
 
-def _draw_family_line(ax, series: BinnedSeries, *, color: str, linestyle) -> None:
+def _draw_family_line(ax, series: BinnedSeries, *, color: str, linestyle, sparse_marker: str = "D") -> None:
     _draw_median_line(ax, series, color=color, linestyle=linestyle)
+    _draw_sparse_median_markers(ax, series, color=color, marker=sparse_marker)
 
 
 def render_status_plot(plt, counts: dict[str, int], title: str, output_path: str, status_order: Sequence[str]) -> None:
@@ -892,7 +933,14 @@ def render_branch_bands(plt, family: str, series_by_solver: dict[str, BinnedSeri
 
     for index, (_, series) in enumerate(items):
         color, linestyle = _family_variant(index)
-        _draw_band(ax, series, color=color, median_linestyle=linestyle)
+        _draw_band(
+            ax,
+            series,
+            color=color,
+            median_linestyle=linestyle,
+            sparse_marker=_family_sparse_marker(index),
+            sparse_color=color,
+        )
 
     apply_axis_style(ax, series_list, x_label, "runtime (ms)")
     ax.set_title(title)
@@ -902,7 +950,21 @@ def render_branch_bands(plt, family: str, series_by_solver: dict[str, BinnedSeri
     legend_handles = []
     for index, (_, series) in enumerate(items):
         color, linestyle = _family_variant(index)
-        legend_handles.append(Line2D([0], [0], color=color, linewidth=MEDIAN_LINEWIDTH, linestyle=linestyle, label=series.solver))
+        legend_handles.append(
+            Line2D(
+                [0],
+                [0],
+                color=color,
+                linewidth=MEDIAN_LINEWIDTH,
+                linestyle=linestyle,
+                marker=_family_sparse_marker(index),
+                markerfacecolor=color,
+                markeredgecolor="white",
+                markeredgewidth=0.7,
+                markersize=6,
+                label=series.solver,
+            )
+        )
     ax.legend(handles=legend_handles, loc="upper left", bbox_to_anchor=(1.02, 1.0), frameon=False)
     _finalize_figure(fig, right=0.8)
     fig.savefig(output_path, dpi=170)
@@ -938,7 +1000,13 @@ def render_branch_bands_detail(
 
     for index, (_, series) in enumerate(items):
         color, linestyle = _family_variant(index)
-        _draw_family_line(ax_overview, series, color=color, linestyle=linestyle)
+        _draw_family_line(
+            ax_overview,
+            series,
+            color=color,
+            linestyle=linestyle,
+            sparse_marker=_family_sparse_marker(index),
+        )
 
     apply_axis_style(ax_overview, series_list, x_label, "runtime (ms)")
     ax_overview.set_title(f"{family}: family comparison")
@@ -948,7 +1016,21 @@ def render_branch_bands_detail(
     legend_handles = []
     for index, (_, series) in enumerate(items):
         color, linestyle = _family_variant(index)
-        legend_handles.append(Line2D([0], [0], color=color, linewidth=MEDIAN_LINEWIDTH, linestyle=linestyle, label=series.solver))
+        legend_handles.append(
+            Line2D(
+                [0],
+                [0],
+                color=color,
+                linewidth=MEDIAN_LINEWIDTH,
+                linestyle=linestyle,
+                marker=_family_sparse_marker(index),
+                markerfacecolor=color,
+                markeredgecolor="white",
+                markeredgewidth=0.7,
+                markersize=6,
+                label=series.solver,
+            )
+        )
     ax_overview.legend(
         handles=legend_handles,
         loc="lower right",
@@ -980,6 +1062,7 @@ def render_branch_bands_detail(
                 rasterized=len(points) > 500,
             )
         _draw_median_line(ax, series, color="black", linestyle=linestyle)
+        _draw_sparse_median_markers(ax, series, color="black", marker=_family_sparse_marker(index))
         apply_axis_style(ax, series_list, x_label, "runtime (ms)")
         ax.set_title(series.solver, loc="left", fontsize=10)
         if index != len(items) - 1:
@@ -992,7 +1075,7 @@ def render_branch_bands_detail(
         detail_axes[0].text(
             0.98,
             1.08,
-            "Per-solver raw points + median",
+            "Per-solver raw points + median (markers: sparse bins)",
             transform=detail_axes[0].transAxes,
             ha="right",
             va="bottom",

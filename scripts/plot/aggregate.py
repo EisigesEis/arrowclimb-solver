@@ -29,6 +29,7 @@ class BinnedSeries:
     q05: list[Optional[float]]
     q25: list[Optional[float]]
     q50: list[Optional[float]]
+    sparse_q50: list[Optional[float]]
     q75: list[Optional[float]]
     q95: list[Optional[float]]
     usable_points: int
@@ -119,23 +120,26 @@ def build_binned_series(
         q05: list[Optional[float]] = []
         q25: list[Optional[float]] = []
         q50: list[Optional[float]] = []
+        sparse_q50: list[Optional[float]] = []
         q75: list[Optional[float]] = []
         q95: list[Optional[float]] = []
 
         for values in per_bin:
             counts.append(len(values))
+            ordered = sorted(values)
             if len(values) < min_bin_n:
                 q05.append(None)
                 q25.append(None)
                 q50.append(None)
+                sparse_q50.append(quantile(ordered, 0.50) if ordered else None)
                 q75.append(None)
                 q95.append(None)
                 continue
 
-            ordered = sorted(values)
             q05.append(quantile(ordered, 0.05))
             q25.append(quantile(ordered, 0.25))
             q50.append(quantile(ordered, 0.50))
+            sparse_q50.append(None)
             q75.append(quantile(ordered, 0.75))
             q95.append(quantile(ordered, 0.95))
 
@@ -147,6 +151,7 @@ def build_binned_series(
             q05=q05,
             q25=q25,
             q50=q50,
+            sparse_q50=sparse_q50,
             q75=q75,
             q95=q95,
             usable_points=len(points_by_solver.get(time_col, [])),

@@ -256,6 +256,8 @@ def comparison_title(title_prefix: str, label: str, *, detail: bool = False) -> 
 def family_comparison_label(family: str) -> str:
     if family == "selected_solver_bands":
         return "selected solver comparison"
+    if family == "selected_solver_bands_without_discrepancy":
+        return "selected solver comparison without discrepancy"
     if family == "mat_update_vs_gur":
         return "mat_update vs gur comparison"
     return f"{family} family comparison"
@@ -318,16 +320,43 @@ def make_plot_specs(mode: str, title_prefix: str, branch_families: dict[str, lis
         ),
     )
     if mode != "acdc":
-        specs.append(
-            PlotSpec(
-                key="selected_solver_bands_detail",
-                filename="selected_solver_bands_detail.png",
-                kind="family_bands_detail",
-                title=comparison_title(title_prefix, family_comparison_label("selected_solver_bands"), detail=True),
-                x_axis_dependent=True,
-                family="selected_solver_bands",
-                solvers=("ac_batch", "ac_fft", "gupta_batch", "gur", "discrepancy"),
-            )
+        specs.extend(
+            [
+                PlotSpec(
+                    key="selected_solver_bands_without_discrepancy",
+                    filename="selected_solver_bands_without_discrepancy.png",
+                    kind="selected_solver_bands_without_discrepancy",
+                    title=comparison_title(
+                        title_prefix,
+                        family_comparison_label("selected_solver_bands_without_discrepancy"),
+                    ),
+                    x_axis_dependent=True,
+                    family="selected_solver_bands_without_discrepancy",
+                    solvers=("ac_batch", "ac_fft", "gupta_batch", "gur"),
+                ),
+                PlotSpec(
+                    key="selected_solver_bands_detail",
+                    filename="selected_solver_bands_detail.png",
+                    kind="family_bands_detail",
+                    title=comparison_title(title_prefix, family_comparison_label("selected_solver_bands"), detail=True),
+                    x_axis_dependent=True,
+                    family="selected_solver_bands",
+                    solvers=("ac_batch", "ac_fft", "gupta_batch", "gur", "discrepancy"),
+                ),
+                PlotSpec(
+                    key="selected_solver_bands_without_discrepancy_detail",
+                    filename="selected_solver_bands_without_discrepancy_detail.png",
+                    kind="family_bands_detail",
+                    title=comparison_title(
+                        title_prefix,
+                        family_comparison_label("selected_solver_bands_without_discrepancy"),
+                        detail=True,
+                    ),
+                    x_axis_dependent=True,
+                    family="selected_solver_bands_without_discrepancy",
+                    solvers=("ac_batch", "ac_fft", "gupta_batch", "gur"),
+                ),
+            ]
         )
     if mode == "main":
         specs[1:1] = [
@@ -545,6 +574,11 @@ def main(argv: list[str] | None = None) -> int:
     selected_solver_cols = [
         time_col for time_col in time_cols if pretty_solver_name(time_col) in selected_solver_names
     ]
+    selected_solver_without_discrepancy_cols = [
+        time_col
+        for time_col in selected_solver_cols
+        if pretty_solver_name(time_col) != "discrepancy"
+    ]
 
     for x_axis in resolved_axes:
         x_label = x_axis_label(x_axis)
@@ -560,6 +594,12 @@ def main(argv: list[str] | None = None) -> int:
         selected_solver_bands = build_binned_series(
             points_by_solver,
             selected_solver_cols,
+            config.bins,
+            config.min_bin_n,
+        )
+        selected_solver_without_discrepancy_bands = build_binned_series(
+            points_by_solver,
+            selected_solver_without_discrepancy_cols,
             config.bins,
             config.min_bin_n,
         )
@@ -611,11 +651,22 @@ def main(argv: list[str] | None = None) -> int:
                         plot_spec.title,
                         output_path,
                     )
+                elif plot_spec.kind == "selected_solver_bands_without_discrepancy":
+                    render_branch_bands(
+                        plt,
+                        plot_spec.family or "selected_solver_bands_without_discrepancy",
+                        selected_solver_without_discrepancy_bands,
+                        x_label,
+                        plot_spec.title,
+                        output_path,
+                    )
                 elif plot_spec.kind == "family_bands_detail":
                     if plot_spec.family == "mat_update_vs_gur":
                         detail_series = mat_update_vs_gur_bands
                     elif plot_spec.family == "selected_solver_bands":
                         detail_series = selected_solver_bands
+                    elif plot_spec.family == "selected_solver_bands_without_discrepancy":
+                        detail_series = selected_solver_without_discrepancy_bands
                     else:
                         detail_series = branch_bands.get(plot_spec.family or "", {})
                     render_branch_bands_detail(

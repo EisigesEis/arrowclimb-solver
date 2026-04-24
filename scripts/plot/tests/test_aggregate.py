@@ -34,6 +34,23 @@ class AggregateTests(unittest.TestCase):
         self.assertAlmostEqual(series.q25[0], 1.5)
         self.assertAlmostEqual(series.q75[0], 2.5)
         self.assertAlmostEqual(series.q50[1], 12.0)
+        self.assertEqual(series.sparse_q50, [None, None])
+
+    def test_build_binned_series_keeps_sparse_bin_median(self) -> None:
+        points_by_solver = {
+            "ns_demo": [
+                (0.1, 1.0),
+                (0.2, 2.0),
+                (0.3, 3.0),
+                (0.8, 10.0),
+                (0.9, 14.0),
+            ]
+        }
+        series = build_binned_series(points_by_solver, ["ns_demo"], bins=2, min_bin_n=3)["ns_demo"]
+        self.assertAlmostEqual(series.q50[0], 2.0)
+        self.assertIsNone(series.q50[1])
+        self.assertIsNone(series.sparse_q50[0])
+        self.assertAlmostEqual(series.sparse_q50[1], 12.0)
 
     def test_compute_fft_efficiency_summary_derives_empty_shares(self) -> None:
         rows = [
