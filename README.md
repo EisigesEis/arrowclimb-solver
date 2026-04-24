@@ -23,8 +23,8 @@ The checked-in `default` preset expects `VCPKG_ROOT` to point at the same vcpkg 
 
 ### Build
 Build via CMake presets:
-`cmake --preset default`
-`cmake --build --preset default`
+- `cmake --preset default`
+- `cmake --build --preset default`
 
 Compiled binaries will live within `${CMAKE_BUILD_DIR}/bin`.
 
@@ -38,9 +38,9 @@ Command:
 - `.\build\bin\uniformsched.exe [-l] [-c] [-acdc] <path\to\instance.dat|folder> [filename-regex]`
 
 Examples:
-- test single file `.\build\bin\uniformsched.exe -l .\instances\E1\M3_N15_U1_20_001.dat`
-- benchmark on dataset `.\build\bin\uniformsched.exe -c .\instances\E1\`
-- benchmark on dataset, only first 20 files of each batch `.\build\bin\uniformsched.exe -c .\instances\E1\ '_(0[0-1]\d|\d|020)\.dat$'`
+- all solvers test single file `.\build\bin\uniformsched.exe -l .\instances\E1\M3_N15_U1_20_001.dat`
+- benchmark all solvers on dataset `.\build\bin\uniformsched.exe -c .\instances\E1\`
+- benchmark all solvers on dataset, only first 20 files of each batch `.\build\bin\uniformsched.exe -c .\instances\E1\ '_(0[0-1]\d|\d|020)\.dat$'`
 - benchmark ac_discrepancy vs. ac_batch on selected first/last batch files `.\build\bin\uniformsched.exe .\instances\E1 -acdc '(M3_N6_U1_20_0((0|1)\d|20)|M5_N25_U20_50_00[1-5])\.dat$'`
 
 Flags:
