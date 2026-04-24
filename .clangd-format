@@ -1,0 +1,93 @@
+BasedOnStyle: LLVM
+Standard: Cpp20
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+
+# --- Braces & control statements ---
+BreakBeforeBraces: Attach
+AllowShortBlocksOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortLoopsOnASingleLine: False
+IndentCaseLabels: true
+
+# --- Alignment & spacing ---
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlignOperands: true
+AlignTrailingComments: true
+SpaceAfterCStyleCast: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeAssignmentOperators: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+# --- Line breaks & wrapping ---
+ColumnLimit: 120
+BinPackArguments: false
+BinPackParameters: false
+BreakConstructorInitializersBeforeComma: false
+ConstructorInitializerIndentWidth: 2
+PenaltyBreakComment: 10
+PenaltyBreakString: 1000
+PenaltyExcessCharacter: 100
+PenaltyReturnTypeOnItsOwnLine: 200
+ReflowComments: true
+
+# --- Includes ---
+IncludeBlocks: Regroup
+SortIncludes: true
+IncludeCategories:
+  - Regex: '^<.*\.h>'
+    Priority: 1
+  - Regex: '^<.*>'
+    Priority: 2
+  - Regex: '^"qcmax/'
+    Priority: 3
+  - Regex: '.*'
+    Priority: 4
+IncludeIsMainRegex: '([-_](test|unittest))?$'
+
+# --- Pointers, references, templates ---
+PointerAlignment: Left     # u32* ptr, not u32 *ptr
+ReferenceAlignment: Left   # const T& ref
+SpaceAfterTemplateKeyword: true
+SpaceBeforeCpp11BracedList: true
+
+# --- Comments & documentation ---
+SortIncludes: true
+CommentPragmas: '^ IWYU pragma:'
+ReflowComments: true
+SpacesInAngles: false
+Cpp11BracedListStyle: true
+
+# --- Namespaces ---
+NamespaceIndentation: None   # clean 0-indent for anon namespace blocks
+FixNamespaceComments: true
+
+# --- Lambdas & functions ---
+AllowShortLambdasOnASingleLine: Inline
+LambdaBodyIndentation: OuterScope
+BraceWrapping:
+  AfterFunction: true
+  BeforeElse: false
+  AfterControlStatement: false
+  AfterStruct: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+
+# --- Misc ---
+SortUsingDeclarations: true
+IncludeStyle: Google
+EmptyLineBeforeAccessModifier: Never
+KeepEmptyLinesAtEOF: false
+
+# Make lambdas behave like normal blocks
+LambdaBodyIndentation: OuterScope
+AlignAfterOpenBracket: DontAlign
+BinPackArguments: true
+AllowShortLambdasOnASingleLine: Inline
+AllowAllArgumentsOnNextLine: false

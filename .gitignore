@@ -1,0 +1,13 @@
+.vscode
+src/bin
+src/obj
+test
+instances_uniform
+_*
+*.bak
+build
+.cache
+.vcpkg
+.pytest_cache
+pytest-cache-files-*
+logs

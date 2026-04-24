@@ -1,0 +1,244 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>merge_sets benchmark viewer</title>
+  <style>
+    body { font-family: sans-serif; margin: 16px; }
+    #top { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    select, input { padding: 4px; }
+    canvas { border: 1px solid #ddd; width: 100%; height: 72vh; }
+    .muted { color: #444; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h2>merge_sets benchmark viewer (no external libs)</h2>
+
+  <div id="top">
+    <label>CSV: <input id="file" type="file" accept=".csv,text/csv"/></label>
+    <label>x:
+      <select id="xSel" disabled>
+        <option value="prod" selected>prod (=asz*bsz)</option>
+        <option value="asz">asz</option>
+        <option value="bsz">bsz</option>
+        <option value="out_sz">out_sz</option>
+      </select>
+    </label>
+    <label>y:
+      <select id="ySel" disabled>
+        <option value="ms" selected>ms</option>
+        <option value="ms_per_prod">ms/prod</option>
+      </select>
+    </label>
+    <label>group:
+      <select id="gSel" disabled>
+        <option value="cap_tightness" selected>cap_tightness</option>
+        <option value="m">m</option>
+        <option value="range">range</option>
+      </select>
+    </label>
+    <label>scale:
+      <select id="scaleSel" disabled>
+        <option value="loglog" selected>log-log</option>
+        <option value="linlin">linear</option>
+      </select>
+    </label>
+  </div>
+
+  <canvas id="c"></canvas>
+  <div class="muted">Expected header: m,asz,bsz,range,cap_tightness,mode,ms,out_sz,prod</div>
+
+<script>
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const header = lines[0].split(",").map(s => s.trim());
+  const rows = [];
+  for (let i=1;i<lines.length;i++) {
+    const cols = lines[i].split(",");
+    if (cols.length !== header.length) continue;
+    const r = {};
+    for (let j=0;j<header.length;j++) r[header[j]] = cols[j].trim();
+    rows.push(r);
+  }
+  return rows;
+}
+
+function num(x){ return Number(x); }
+
+function uniq(arr){
+  return Array.from(new Set(arr)).sort((a,b)=> (a<b?-1:a>b?1:0));
+}
+
+function colorFor(key){
+  // deterministic hash -> color
+  let h = 2166136261;
+  for (let i=0;i<key.length;i++){
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const r = (h>>>0) & 255;
+  const g = (h>>>8) & 255;
+  const b = (h>>>16) & 255;
+  return `rgb(${r},${g},${b})`;
+}
+
+function drawPlot(rows, xKey, yKey, gKey, scale){
+  const canvas = document.getElementById("c");
+  // high DPI
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.max(300, Math.floor(rect.width * dpr));
+  canvas.height = Math.max(200, Math.floor(rect.height * dpr));
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0,0,rect.width,rect.height);
+  ctx.fillStyle = "white";
+  ctx.fillRect(0,0,rect.width,rect.height);
+
+  // compute derived y
+  const pts = rows.map(r => {
+    const x = num(r[xKey]);
+    let y = num(r["ms"]);
+    if (yKey === "ms_per_prod") y = y / Math.max(1, num(r["prod"]));
+    return {x,y,mode:r["mode"], g:r[gKey]};
+  }).filter(p => isFinite(p.x) && isFinite(p.y) && p.x>0 && p.y>0);
+
+  if (!pts.length) {
+    ctx.fillStyle = "#000";
+    ctx.fillText("No points to plot (check CSV header).", 10, 20);
+    return;
+  }
+
+  const padL=60, padR=20, padT=20, padB=50;
+  const w = rect.width, h = rect.height;
+
+  function tx(v){
+    if (scale==="loglog") return Math.log10(v);
+    return v;
+  }
+  function ty(v){
+    if (scale==="loglog") return Math.log10(v);
+    return v;
+  }
+
+  let xmin=Infinity,xmax=-Infinity,ymin=Infinity,ymax=-Infinity;
+  for (const p of pts){
+    const X=tx(p.x), Y=ty(p.y);
+    xmin=Math.min(xmin,X); xmax=Math.max(xmax,X);
+    ymin=Math.min(ymin,Y); ymax=Math.max(ymax,Y);
+  }
+  if (xmin===xmax) { xmin-=1; xmax+=1; }
+  if (ymin===ymax) { ymin-=1; ymax+=1; }
+
+  function sx(v){
+    const X = tx(v);
+    return padL + (X-xmin)/(xmax-xmin) * (w-padL-padR);
+  }
+  function sy(v){
+    const Y = ty(v);
+    return padT + (1-(Y-ymin)/(ymax-ymin)) * (h-padT-padB);
+  }
+
+  // axes
+  ctx.strokeStyle="#444";
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT);
+  ctx.lineTo(padL, h-padB);
+  ctx.lineTo(w-padR, h-padB);
+  ctx.stroke();
+
+  // labels
+  ctx.fillStyle="#000";
+  ctx.font="12px sans-serif";
+  ctx.fillText(xKey + (scale==="loglog" ? " (log10)" : ""), padL, h-12);
+  ctx.save();
+  ctx.translate(12, padT + (h-padT-padB)/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText(yKey + (scale==="loglog" ? " (log10)" : ""), 0, 0);
+  ctx.restore();
+
+  // group by (g,mode)
+  const groups = {};
+  for (const p of pts){
+    const key = `${p.g} | ${p.mode}`;
+    (groups[key] ||= []).push(p);
+  }
+
+  // draw lines
+  for (const [key, arr] of Object.entries(groups)){
+    arr.sort((a,b)=>a.x-b.x);
+    ctx.strokeStyle = colorFor(key);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i=0;i<arr.length;i++){
+      const px = sx(arr[i].x), py = sy(arr[i].y);
+      if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.stroke();
+
+    // points
+    ctx.fillStyle = ctx.strokeStyle;
+    for (const p of arr){
+      const px = sx(p.x), py = sy(p.y);
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // legend
+  const keys = Object.keys(groups).sort();
+  let lx = padL + 10, ly = padT + 10;
+  ctx.font="12px sans-serif";
+  for (const key of keys){
+    ctx.fillStyle = colorFor(key);
+    ctx.fillRect(lx, ly-9, 10, 10);
+    ctx.fillStyle="#000";
+    ctx.fillText(key, lx+14, ly);
+    ly += 16;
+    if (ly > h - padB - 10) { ly = padT + 10; lx += 260; }
+  }
+}
+
+let rows = [];
+const fileInput = document.getElementById("file");
+const xSel = document.getElementById("xSel");
+const ySel = document.getElementById("ySel");
+const gSel = document.getElementById("gSel");
+const scaleSel = document.getElementById("scaleSel");
+
+function enable(on){
+  xSel.disabled = !on;
+  ySel.disabled = !on;
+  gSel.disabled = !on;
+  scaleSel.disabled = !on;
+}
+
+function redraw(){
+  if (!rows.length) return;
+  drawPlot(rows, xSel.value, ySel.value, gSel.value, scaleSel.value);
+}
+
+fileInput.addEventListener("change", async (e) => {
+  const f = e.target.files?.[0];
+  if (!f) return;
+  const text = await f.text();
+  rows = parseCSV(text);
+  if (!rows.length){
+    alert("Could not parse CSV (empty or wrong header).");
+    enable(false);
+    return;
+  }
+  enable(true);
+  redraw();
+});
+
+[xSel,ySel,gSel,scaleSel].forEach(el => el.addEventListener("change", redraw));
+window.addEventListener("resize", redraw);
+</script>
+</body>
+</html>
