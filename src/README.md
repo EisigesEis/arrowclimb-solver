@@ -53,8 +53,6 @@ All regular solvers were tested on dataset `E1`.
 
 The lower bound of binary search can likely be tightened. For now we reject any makespan guess with negative $\ell = \text{total\_capacity} - \text{total\_load}$ at `derive_for_guess`.
 
-The remaining unexplained anomalies are the advantage of `gupta` over `ac_batch` on lower-complexity instances and the binary-powering spike on highly complex instances.
-
 Promising follow-up work:
 - Use matrix redundancies from bachelor thesis directly within solver algorithms.
 - Reuse information across binary-search iterations.
