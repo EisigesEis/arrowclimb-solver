@@ -13,9 +13,11 @@
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "UNIFORMSCHED_VCPKG_ROOT": "$env{VCPKG_ROOT}",
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "UNIFORMSCHED_VCPKG_ROOT": "$env{USERPROFILE}/Downloads/vcpkg",
+        "CMAKE_TOOLCHAIN_FILE": "$env{USERPROFILE}/Downloads/vcpkg/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_TARGET_TRIPLET": "x64-windows"
       }
     }

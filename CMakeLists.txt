@@ -164,6 +164,20 @@ find_library(FFTW3L_LIBRARY
   NAMES libfftw3l-3 libfftw3l fftw3l
   HINTS "${FFTW3_ROOT}" ENV FFTW3_ROOT
   PATH_SUFFIXES lib)
+if(WIN32)
+  find_file(FFTW3_DLL
+    NAMES libfftw3-3.dll libfftw3.dll fftw3.dll
+    HINTS "${FFTW3_ROOT}" ENV FFTW3_ROOT
+    PATH_SUFFIXES bin)
+  find_file(FFTW3F_DLL
+    NAMES libfftw3f-3.dll libfftw3f.dll fftw3f.dll
+    HINTS "${FFTW3_ROOT}" ENV FFTW3_ROOT
+    PATH_SUFFIXES bin)
+  find_file(FFTW3L_DLL
+    NAMES libfftw3l-3.dll libfftw3l.dll fftw3l.dll
+    HINTS "${FFTW3_ROOT}" ENV FFTW3_ROOT
+    PATH_SUFFIXES bin)
+endif()
 
 if(NOT FFTW3_INCLUDE)
   message(FATAL_ERROR "Could not find FFTW3_INCLUDE")
@@ -177,15 +191,50 @@ endif()
 if(NOT FFTW3L_LIBRARY)
   message(FATAL_ERROR "Could not find FFTW3L_LIBRARY (long double)")
 endif()
+if(WIN32 AND NOT FFTW3_DLL)
+  message(FATAL_ERROR "Could not find FFTW3_DLL")
+endif()
+if(WIN32 AND NOT FFTW3F_DLL)
+  message(FATAL_ERROR "Could not find FFTW3F_DLL (single precision)")
+endif()
+if(WIN32 AND NOT FFTW3L_DLL)
+  message(FATAL_ERROR "Could not find FFTW3L_DLL (long double)")
+endif()
 
-add_library(FFTW3::fftw  UNKNOWN IMPORTED)
-set_target_properties(FFTW3::fftw  PROPERTIES IMPORTED_LOCATION "${FFTW3_LIBRARY}"  INTERFACE_INCLUDE_DIRECTORIES "${FFTW3_INCLUDE}")
+if(WIN32)
+  add_library(FFTW3::fftw SHARED IMPORTED)
+  set_target_properties(FFTW3::fftw PROPERTIES
+    IMPORTED_IMPLIB "${FFTW3_LIBRARY}"
+    IMPORTED_LOCATION "${FFTW3_DLL}"
+    INTERFACE_INCLUDE_DIRECTORIES "${FFTW3_INCLUDE}")
 
-add_library(FFTW3::fftwf UNKNOWN IMPORTED)
-set_target_properties(FFTW3::fftwf PROPERTIES IMPORTED_LOCATION "${FFTW3F_LIBRARY}" INTERFACE_INCLUDE_DIRECTORIES "${FFTW3_INCLUDE}")
+  add_library(FFTW3::fftwf SHARED IMPORTED)
+  set_target_properties(FFTW3::fftwf PROPERTIES
+    IMPORTED_IMPLIB "${FFTW3F_LIBRARY}"
+    IMPORTED_LOCATION "${FFTW3F_DLL}"
+    INTERFACE_INCLUDE_DIRECTORIES "${FFTW3_INCLUDE}")
 
-add_library(FFTW3::fftwl UNKNOWN IMPORTED)
-set_target_properties(FFTW3::fftwl PROPERTIES IMPORTED_LOCATION "${FFTW3L_LIBRARY}" INTERFACE_INCLUDE_DIRECTORIES "${FFTW3_INCLUDE}")
+  add_library(FFTW3::fftwl SHARED IMPORTED)
+  set_target_properties(FFTW3::fftwl PROPERTIES
+    IMPORTED_IMPLIB "${FFTW3L_LIBRARY}"
+    IMPORTED_LOCATION "${FFTW3L_DLL}"
+    INTERFACE_INCLUDE_DIRECTORIES "${FFTW3_INCLUDE}")
+else()
+  add_library(FFTW3::fftw UNKNOWN IMPORTED)
+  set_target_properties(FFTW3::fftw PROPERTIES
+    IMPORTED_LOCATION "${FFTW3_LIBRARY}"
+    INTERFACE_INCLUDE_DIRECTORIES "${FFTW3_INCLUDE}")
+
+  add_library(FFTW3::fftwf UNKNOWN IMPORTED)
+  set_target_properties(FFTW3::fftwf PROPERTIES
+    IMPORTED_LOCATION "${FFTW3F_LIBRARY}"
+    INTERFACE_INCLUDE_DIRECTORIES "${FFTW3_INCLUDE}")
+
+  add_library(FFTW3::fftwl UNKNOWN IMPORTED)
+  set_target_properties(FFTW3::fftwl PROPERTIES
+    IMPORTED_LOCATION "${FFTW3L_LIBRARY}"
+    INTERFACE_INCLUDE_DIRECTORIES "${FFTW3_INCLUDE}")
+endif()
 
 # ---- -CUDA --------------------------------------------------------------------
 # set(CMAKE_CUDA_ARCHITECTURES native)
